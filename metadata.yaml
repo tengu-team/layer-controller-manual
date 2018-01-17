@@ -1,0 +1,12 @@
+name: controller-manual
+summary: Enables the use of manual-clouds in the Sojobo-api
+maintainer: Sebastien Pattyn <sebastien.pattyn@tengu.io>
+description: |
+  This subordinate charm copies the necessairy files to enable the use of manual-type clouds and restarts the api.
+tags: ['misc']
+subordinate: true
+requires:
+    sojobo:
+        interface: sojobo
+        scope: container
+series: ['xenial']
