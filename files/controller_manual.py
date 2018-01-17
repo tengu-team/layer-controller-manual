@@ -16,8 +16,8 @@
 # pylint: disable=c0111,c0301,c0325, r0903,w0406,e0401
 from subprocess import check_output
 
-def create_controller(name, data):
-    output = check_output(['juju', 'bootstrap', '--agent-version=2.3.0', 'google/{}'.format(data['url']), name])
+def create_controller(name, url):
+    output = check_output(['juju', 'bootstrap', '--agent-version=2.3.0', 'manual/{}'.format(url), name])
     return output
 
 
