@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # pylint: disable=c0111,c0301,c0325, r0903,w0406,e0401
+import json
 from subprocess import check_output
 
 def create_controller(name, url):
@@ -22,4 +23,17 @@ def create_controller(name, url):
 
 
 def get_supported_series():
-    return ['precise', 'trusty', 'xenial', 'yakkety']
+    return ['trusty', 'xenial', 'yakkety']
+
+
+def generate_cred_file(name, credentials):
+    result = {
+        'type': 'jsonfile',
+        'name': name,
+        'key': {'file': str(json.dumps(credentials))}
+    }
+    return result
+
+
+def get_supported_regions():
+    return []
