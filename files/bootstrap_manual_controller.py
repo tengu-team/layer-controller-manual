@@ -37,14 +37,14 @@ class JuJu_Token(object):  #pylint: disable=R0903
         self.is_admin = True
 
 
-async def create_controller(c_type, name, url):
+async def create_controller(name, url):
     try:
         logger.info('Adding controller to database')
         token = JuJu_Token()
         datastore.create_manual_controller(name, c_type, url)
         datastore.add_user_to_controller(name, 'admin', 'superuser')
 
-        juju.get_controller_types()[c_type].create_controller(name, url)
+        check_output(['juju', 'bootstrap', '--agent-version=2.3.0', 'manual/{}'.format(url), name])
         pswd = token.password
 
         logger.info('Setting admin password')
@@ -52,6 +52,7 @@ async def create_controller(c_type, name, url):
                      input=bytes('{}\n{}\n'.format(pswd, pswd), 'utf-8'))
 
         logger.info('Updating controller in database')
+        con_data = {}
         with open(os.path.join(str(Path.home()), '.local', 'share', 'juju', 'controllers.yaml'), 'r') as data:
             con_data = yaml.load(data)
         datastore.set_controller_state(
@@ -62,16 +63,19 @@ async def create_controller(c_type, name, url):
             con_data['controllers'][name]['ca-cert'])
 
         logger.info('Connecting to controller')
-        controller = juju.Controller_Connection(token, name)
+        controller = Controller()
 
-        logger.info('Adding existing credentials and models to database')
-        async with controller.connect(token) as juju_con:
-            models = await juju_con.get_models()
-            for model in models.serialize()['user-models']:
-                model = model.serialize()['model'].serialize()
-                datastore.add_model_to_controller(name, model['name'])
-                datastore.set_model_state(name, model['name'], 'ready', credential='manual_controller', uuid=model['uuid'])
-                datastore.set_model_access(name, model['name'], token.username, 'admin')
+        logger.info('Adding existing credentials and default models to database')
+        credentials = datastore.get_credentials(token.username)
+        await controller.connect(con_data['controllers'][name]['api-endpoints'][0], token.username, token.password, con_data['controllers'][name]['ca-cert'])
+        controller_facade = client.ControllerFacade.from_connection(controller.connection)
+        models = await controller_facade.AllModels()
+        for model in models.user_models:
+            new_model = datastore.create_model(model.model.name, state='Model is being deployed', uuid='')
+            datastore.add_model_to_controller(model.model.name, new_model["_key"])
+            datastore.set_model_state(new_model["_key"], 'ready', credential=cred_name, uuid=model.model.uuid)
+            datastore.set_model_access(new_model["_key"], token.username, 'admin')
+        await controller.disconnect()
         logger.info('Controller succesfully created!')
     except Exception:  #pylint: disable=W0703
         datastore.destroy_controller(name)
@@ -91,6 +95,5 @@ if __name__ == '__main__':
     logger.setLevel(logging.INFO)
     loop = asyncio.get_event_loop()
     loop.set_debug(False)
-    loop.run_until_complete(create_manual_controller(sys.argv[1], sys.argv[2],
-                                              sys.argv[3]))
+    loop.run_until_complete(create_manual_controller(sys.argv[1], sys.argv[2]))
     loop.close()

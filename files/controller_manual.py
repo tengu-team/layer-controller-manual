@@ -14,26 +14,24 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # pylint: disable=c0111,c0301,c0325, r0903,w0406,e0401
-import json
-from subprocess import check_output
+from sojobo_api import settings
+from subprocess import check_output, Popen
 
-def create_controller(name, url):
-    output = check_output(['juju', 'bootstrap', '--agent-version=2.3.0', 'manual/{}'.format(url), name])
-    return output
-
+def create_controller(name, data):
+    Popen(["python3", "{}/scripts/bootstrap_manual_controller.py".format(settings.SOJOBO_API_DIR), name, data['url']])
+    return 202, 'Environment {} is being created on url {}'.format(name, data['url'])
 
 def get_supported_series():
     return ['trusty', 'xenial', 'yakkety']
 
-
 def generate_cred_file(name, credentials):
-    result = {
-        'type': 'jsonfile',
-        'name': name,
-        'key': {'file': str(json.dumps(credentials))}
-    }
-    return result
-
+    raise NotImplementedError
 
 def get_supported_regions():
-    return []
+    raise NotImplementedError
+
+def check_valid_credentials(credentials):
+    raise NotImplementedError
+
+def add_credential(user, data):
+    raise NotImplementedError
